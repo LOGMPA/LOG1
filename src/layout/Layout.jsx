@@ -7,7 +7,7 @@ import {
 } from "../components/ui/sidebar";
 
 const navigationItems = [
-  { title: "Painel Logística 2026", url: "/#/painel", icon: LayoutDashboard },
+  { title: "Painel Logística 2026", url: "LOG1/#/painel", icon: LayoutDashboard },
   { title: "Calendário", url: "LOG1/#/calendario", icon: Calendar },
   { title: "Solicitações de Transporte", url: "LOG1/#/solicitacoes", icon: FileText },
   { title: "Transportes Concluídos", url: "LOG1/#/concluidos", icon: CheckCircle },
