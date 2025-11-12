@@ -1,6 +1,6 @@
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, Calendar, FileText, CheckCircle, Presentation, Truck } from "lucide-react";
+import { LayoutDashboard, Calendar, FileText, CheckCircle, Presentation, Tractor } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
   SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarHeader, SidebarProvider, SidebarTrigger
@@ -23,8 +23,9 @@ export default function Layout({ children }) {
         <Sidebar className="border-r border-gray-200">
           <SidebarHeader className="border-b border-gray-200 p-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
-                <Truck className="w-6 h-6 text-white" />
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center shadow-lg"
+                style={{ backgroundColor: "#275317" }}>
+               <Tractor className="w-6 h-6 text-white" />
               </div>
               <div>
                 <h2 className="font-bold text-gray-900 text-lg">Logística</h2>
