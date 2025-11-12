@@ -180,7 +180,7 @@ export default function PainelLogistica() {
         <CardHeader className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
           <div>
             <CardTitle className="text-lg font-bold text-gray-900">Custos de Transporte por Cidade</CardTitle>
-            <p className="text-sm text-gray-600">Valores considerando R$ TERC quando disponível, caso contrário R$ PROP</p>
+            <p className="text-sm text-gray-600">Valores considerando Terceiros quando contratados, caso contrário considera Frota Própria</p>
           </div>
           <div className="flex items-center gap-3">
             <label className="text-sm text-gray-700">Mês:</label>
