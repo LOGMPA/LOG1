@@ -1,17 +1,24 @@
 import React, { useState } from "react";
 import { useSolicitacoes } from "../hooks/useSolicitacoes";
-import { format, subDays } from "date-fns";
+import { format, subDays, startOfMonth, endOfMonth, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Clock, Truck, Navigation, CheckCircle, ExternalLink } from "lucide-react";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, LabelList
+} from "recharts";
 import StatusCard from "../components/logistica/StatusCard";
 import SolicitacaoCard from "../components/logistica/SolicitacaoCard";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 
 export default function PainelLogistica() {
+  // filtro antigo por range (mantido caso use em outros pontos)
   const [dataInicio, setDataInicio] = useState(format(subDays(new Date(), 30), "yyyy-MM-dd"));
   const [dataFim, setDataFim] = useState(format(new Date(), "yyyy-MM-dd"));
+
+  // filtro de mês para o gráfico (YYYY-MM)
+  const [mesRef, setMesRef] = useState(format(new Date(), "yyyy-MM"));
+
   const { data: solicitacoes = [], isLoading } = useSolicitacoes();
 
   const statusColors = {
@@ -21,6 +28,30 @@ export default function PainelLogistica() {
     CONCLUIDO: { bg: "bg-gradient-to-br from-green-50 to-green-100", accent: "bg-green-500", text: "text-green-700", icon: "text-green-600" }
   };
 
+  // lista fixa das 8 cidades
+  const CIDADES_FIXAS = [
+    "PONTA GROSSA",
+    "CASTRO",
+    "IRATI",
+    "ARAPOTI",
+    "GUARAPUAVA",
+    "PRUDENTÓPOLIS",
+    "QUEDAS DO IGUAÇU",
+    "TIBAGI",
+  ];
+
+  const extrairCidade = (texto) => {
+    if (!texto) return null;
+    const t = String(texto).toUpperCase();
+    for (const c of CIDADES_FIXAS) if (t.includes(c)) return c;
+    return null;
+  };
+
+  // formatação de moeda para labels e tooltip
+  const moeda = (v) =>
+    `R$ ${Number(v || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+  // cards por status (range antigo)
   const solicitacoesFiltradas = solicitacoes.filter(s => {
     const d = new Date(s.previsao);
     if (String(s.status).includes("(D)")) return false;
@@ -38,41 +69,54 @@ export default function PainelLogistica() {
 
   const proximosQuinzeDias = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
 
-  const recebidos = solicitacoes.filter(s => s.status === "RECEBIDO" && new Date(s.previsao) <= proximosQuinzeDias)
+  const recebidos = solicitacoes
+    .filter(s => s.status === "RECEBIDO" && new Date(s.previsao) <= proximosQuinzeDias)
     .sort((a, b) => new Date(a.previsao) - new Date(b.previsao));
-  const programados = solicitacoes.filter(s => s.status === "PROGRAMADO" && new Date(s.previsao) <= proximosQuinzeDias)
+  const programados = solicitacoes
+    .filter(s => s.status === "PROGRAMADO" && new Date(s.previsao) <= proximosQuinzeDias)
     .sort((a, b) => new Date(a.previsao) - new Date(b.previsao));
-  const emRota = solicitacoes.filter(s => s.status === "EM ROTA" && new Date(s.previsao) <= proximosQuinzeDias)
+  const emRota = solicitacoes
+    .filter(s => s.status === "EM ROTA" && new Date(s.previsao) <= proximosQuinzeDias)
     .sort((a, b) => new Date(a.previsao) - new Date(b.previsao));
 
-  const cidades = ["PONTA GROSSA", "CASTRO", "IRATI", "ARAPOTI", "GUARAPUAVA", "PRUDENTÓPOLIS", "QUEDAS DO IGUAÇU", "TIBAGI"];
-  const extrairCidade = (texto) => {
-    if (!texto) return null;
-    const t = String(texto).toUpperCase();
-    for (const c of cidades) if (t.includes(c)) return c;
-    return null;
-  };
+  // intervalo do mês selecionado para o gráfico
+  const [anoGraf, mesGraf] = mesRef.split("-").map(Number);
+  const inicioMes = startOfMonth(new Date(anoGraf, mesGraf - 1, 1));
+  const fimMes = endOfMonth(new Date(anoGraf, mesGraf - 1, 1));
 
-  const dadosCustosPorCidade = (() => {
-    const custoPorCidade = {};
-    solicitacoesFiltradas.forEach(s => {
-      const origem = extrairCidade(s.esta);
-      const destino = extrairCidade(s.vai);
-      const valorUsar = (s.valor_terc || 0) > 0 ? (s.valor_terc || 0) : (s.valor_prop || 0);
-      if (origem) custoPorCidade[origem] = (custoPorCidade[origem] || 0) + valorUsar;
-      if (destino && destino !== origem) custoPorCidade[destino] = (custoPorCidade[destino] || 0) + valorUsar;
-    });
-    return Object.entries(custoPorCidade).map(([cidade, valor]) => ({
-      cidade: cidade.charAt(0) + cidade.slice(1).toLowerCase(),
-      valor
-    })).sort((a, b) => b.valor - a.valor).slice(0, 8);
-  })();
+  const recorteMensal = solicitacoes.filter((s) => {
+    if (!s.previsao) return false;
+    const d = parseISO(s.previsao);
+    if (isNaN(d)) return false;
+    return d >= inicioMes && d <= fimMes;
+  });
+
+  // soma por cidade (origem e destino contam)
+  const somaPorCidade = {};
+  CIDADES_FIXAS.forEach(c => (somaPorCidade[c] = 0));
+
+  recorteMensal.forEach((s) => {
+    const origem = extrairCidade(s.esta) || extrairCidade(s.estao_em);
+    const destino = extrairCidade(s.vai) || extrairCidade(s.vai_para);
+    const valor = (s.valor_terc || 0) > 0 ? Number(s.valor_terc) : Number(s.valor_prop || 0);
+
+    if (origem && somaPorCidade[origem] !== undefined) somaPorCidade[origem] += valor || 0;
+    if (destino && destino !== origem && somaPorCidade[destino] !== undefined) somaPorCidade[destino] += valor || 0;
+  });
+
+  // dataset das 8 cidades, paleta John Deere
+  const JD_COLORS = ["#275317", "#367C2B", "#4E9F3D", "#6BBF59", "#275317", "#367C2B", "#4E9F3D", "#6BBF59"];
+  const dadosCidadesColuna = CIDADES_FIXAS.map((c, i) => ({
+    cidade: c.charAt(0) + c.slice(1).toLowerCase(),
+    valor: somaPorCidade[c] || 0,
+    fill: JD_COLORS[i % JD_COLORS.length],
+  }));
 
   return (
     <div className="p-6 md:p-8 space-y-8">
       <div>
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Painel Logística 2026</h1>
-        <p className="text-gray-600">Visão geral das operações de transporte</p>
+        <p className="text-gray-600">Visão geral das operações de transporte que são solicitada através do Forms.</p>
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
@@ -133,18 +177,34 @@ export default function PainelLogistica() {
       </div>
 
       <Card className="border-none shadow-md">
-        <CardHeader>
-          <CardTitle className="text-lg font-bold text-gray-900">Custos de Transporte por Cidade</CardTitle>
-          <p className="text-sm text-gray-600">Valores considerando R$ TERC quando disponível, caso contrário R$ PROP</p>
+        <CardHeader className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+          <div>
+            <CardTitle className="text-lg font-bold text-gray-900">Custos de Transporte por Cidade</CardTitle>
+            <p className="text-sm text-gray-600">Valores considerando R$ TERC quando disponível, caso contrário R$ PROP</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <label className="text-sm text-gray-700">Mês:</label>
+            <input
+              type="month"
+              value={mesRef}
+              onChange={(e) => setMesRef(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"
+            />
+          </div>
         </CardHeader>
         <CardContent>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={dadosCustosPorCidade} layout="vertical">
+          <ResponsiveContainer width="100%" height={340}>
+            <BarChart data={dadosCidadesColuna} margin={{ top: 8, right: 16, left: 0, bottom: 24 }}>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis type="number" />
-              <YAxis dataKey="cidade" type="category" width={120} />
-              <Tooltip formatter={(value) => `R$ ${Number(value).toFixed(2)}`} />
-              <Bar dataKey="valor" name="Custo (R$)" />
+              <XAxis dataKey="cidade" angle={-15} textAnchor="end" height={50} />
+              <YAxis tickFormatter={(v) => `R$ ${Number(v).toLocaleString("pt-BR")}`} />
+              <Tooltip formatter={(v) => moeda(v)} />
+              <Bar dataKey="valor" name="Custo (R$)" isAnimationActive>
+                {dadosCidadesColuna.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.fill} />
+                ))}
+                <LabelList dataKey="valor" position="top" formatter={(v) => moeda(v)} />
+              </Bar>
             </BarChart>
           </ResponsiveContainer>
         </CardContent>
