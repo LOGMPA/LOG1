@@ -8,10 +8,10 @@ import {
 
 const navigationItems = [
   { title: "Painel Logística 2026", url: "/#/painel", icon: LayoutDashboard },
-  { title: "Calendário", url: "/#/calendario", icon: Calendar },
-  { title: "Solicitações de Transporte", url: "/#/solicitacoes", icon: FileText },
-  { title: "Transportes Concluídos", url: "/#/concluidos", icon: CheckCircle },
-  { title: "Demonstrações", url: "/#/demos", icon: Presentation },
+  { title: "Calendário", url: "LOG1/#/calendario", icon: Calendar },
+  { title: "Solicitações de Transporte", url: "LOG1/#/solicitacoes", icon: FileText },
+  { title: "Transportes Concluídos", url: "LOG1/#/concluidos", icon: CheckCircle },
+  { title: "Demonstrações", url: "LOG1/#/demos", icon: Presentation },
 ];
 
 export default function Layout({ children }) {
