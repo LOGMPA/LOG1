@@ -1,6 +1,6 @@
+// src/api/excelClient.js
 import * as XLSX from "xlsx";
 
-// Map Excel header names to entity keys
 const headerMap = {
   "STATUS": "status",
   "FRETE": "frete",
@@ -23,13 +23,11 @@ const headerMap = {
 
 function toDateString(v) {
   if (!v) return "";
-  // If Excel date number
   if (typeof v === "number") {
     const d = XLSX.SSF.parse_date_code(v);
     const dt = new Date(Date.UTC(d.y, d.m - 1, d.d));
     return dt.toISOString().slice(0,10);
   }
-  // If it's already a Date or ISO-like string
   try {
     const dt = new Date(v);
     if (!isNaN(dt)) return dt.toISOString().slice(0,10);
@@ -39,24 +37,47 @@ function toDateString(v) {
 
 function splitChassi(val) {
   if (!val) return [];
-  return String(val)
-    .split(/[;|,|\n|\r]+/)
-    .map(s => s.trim())
-    .filter(Boolean);
+  return String(val).split(/[;,\n\r]+/).map(s => s.trim()).filter(Boolean);
 }
 
-export async function loadSolicitacoesFromExcel(url = "data/Solicitacoes.xlsx") {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error("Falha ao carregar o Excel");
+async function fetchFirst(paths) {
+  for (const p of paths) {
+    const res = await fetch(p);
+    if (res.ok) return { res, path: p };
+  }
+  throw new Error("Nenhum arquivo de dados encontrado nas opções: " + paths.join(", "));
+}
+
+export async function loadSolicitacoesFromExcel() {
+  // tenta xlsx e csv, com e sem acento, e variações de caixa
+  const candidates = [
+    "data/Solicitacoes.xlsx",
+    "data/solicitacoes.xlsx",
+    "data/Solicitações.xlsx",
+    "data/solicitações.xlsx",
+    "data/Solicitacoes.csv",
+    "data/solicitacoes.csv",
+    "data/Solicitações.csv",
+    "data/solicitações.csv",
+  ];
+  const { res, path } = await fetchFirst(candidates);
   const buf = await res.arrayBuffer();
-  const wb = XLSX.read(buf, { type: "array" });
+
+  let wb;
+  if (path.toLowerCase().endsWith(".csv")) {
+    const text = new TextDecoder("utf-8").decode(new Uint8Array(buf));
+    wb = XLSX.read(text, { type: "string" });
+  } else {
+    wb = XLSX.read(buf, { type: "array" });
+  }
+
   const ws = wb.Sheets[wb.SheetNames[0]];
-  const rows = XLSX.utils.sheet_to_json(ws, { defval: "" }); // array of objects
+  const rows = XLSX.utils.sheet_to_json(ws, { defval: "" });
 
   const mapped = rows.map((row, idx) => {
     const obj = {};
     Object.entries(row).forEach(([k, v]) => {
-      const key = headerMap[k?.trim()] || null;
+      const key = headerMap[k?.trim()];
       if (!key) return;
       if (key === "previsao" || key === "real") obj[key] = toDateString(v);
       else if (key === "km") obj[key] = Number(String(v).replace(/[^0-9.-]/g, "")) || 0;
@@ -64,9 +85,7 @@ export async function loadSolicitacoesFromExcel(url = "data/Solicitacoes.xlsx") 
       else if (key === "chassi_lista") obj[key] = splitChassi(v);
       else obj[key] = typeof v === "string" ? v.trim() : v;
     });
-    // Ensure minimal fields
     obj.id = idx + 1;
-    // Fallback mapping when some columns use alternate names
     if (!obj.esta && row["ESTÁ EM:"]) obj.esta = String(row["ESTÁ EM:"]).trim();
     if (!obj.vai && row["VAI PARA:"]) obj.vai = String(row["VAI PARA:"]).trim();
     return obj;
