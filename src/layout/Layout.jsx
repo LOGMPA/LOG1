@@ -7,15 +7,16 @@ import {
 } from "../components/ui/sidebar";
 
 const navigationItems = [
-  { title: "Painel Logística 2026", url: "LOG1/#/painel", icon: LayoutDashboard },
-  { title: "Calendário", url: "LOG1/#/calendario", icon: Calendar },
-  { title: "Solicitações de Transporte", url: "LOG1/#/solicitacoes", icon: FileText },
-  { title: "Transportes Concluídos", url: "LOG1/#/concluidos", icon: CheckCircle },
-  { title: "Demonstrações", url: "LOG1/#/demos", icon: Presentation },
+  { title: "Painel Logística 2026", to: "/painel", icon: LayoutDashboard },
+  { title: "Calendário", to: "/calendario", icon: Calendar },
+  { title: "Solicitações de Transporte", to: "/solicitacoes", icon: FileText },
+  { title: "Transportes Concluídos", to: "/concluidos", icon: CheckCircle },
+  { title: "Demonstrações", to: "/demos", icon: Presentation },
 ];
 
 export default function Layout({ children }) {
   const location = useLocation();
+
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-[#FAFAF9]">
@@ -31,21 +32,32 @@ export default function Layout({ children }) {
               </div>
             </div>
           </SidebarHeader>
+
           <SidebarContent className="p-3">
             <SidebarGroup>
-              <SidebarGroupLabel className="text-xs font-semibold text-gray-500 uppercase tracking-wider px-2 py-2 mb-1">Navegação</SidebarGroupLabel>
+              <SidebarGroupLabel className="text-xs font-semibold text-gray-500 uppercase tracking-wider px-2 py-2 mb-1">
+                Navegação
+              </SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu>
-                  {navigationItems.map((item) => (
-                    <SidebarMenuItem key={item.title}>
-                      <SidebarMenuButton asChild className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg mb-1 ${location.hash.includes(item.url.split('#/')[1]) ? "bg-blue-50 text-blue-700 font-medium" : ""}`}>
-                        <a href={item.url} className="flex items-center gap-3 px-3 py-2.5">
-                          <item.icon className="w-4 h-4" />
-                          <span className="text-sm">{item.title}</span>
-                        </a>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ))}
+                  {navigationItems.map((item) => {
+                    const active = location.pathname.startsWith(item.to);
+                    return (
+                      <SidebarMenuItem key={item.title}>
+                        <SidebarMenuButton
+                          asChild
+                          className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg mb-1 ${
+                            active ? "bg-blue-50 text-blue-700 font-medium" : ""
+                          }`}
+                        >
+                          <Link to={item.to} className="flex items-center gap-3 px-3 py-2.5">
+                            <item.icon className="w-4 h-4" />
+                            <span className="text-sm">{item.title}</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    );
+                  })}
                 </SidebarMenu>
               </SidebarGroupContent>
             </SidebarGroup>
