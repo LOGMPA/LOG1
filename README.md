@@ -1,4 +1,4 @@
-# Painel Logística (GitHub Pages)
+# Painel Logística
 
 Painel estático que lê `public/data/Solicitacoes.xlsx` e replica as páginas do seu painel (cards, calendário, listas e gráficos) com as mesmas cores e ícones. Proteção simples por senha no primeiro acesso.
 
