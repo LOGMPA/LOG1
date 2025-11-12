@@ -79,13 +79,13 @@ export default function PainelLogistica() {
         <h2 className="text-sm font-semibold text-gray-900 mb-4">Formulários de Solicitação</h2>
         <div className="flex flex-wrap gap-3">
           <Button variant="outline" className="gap-2" asChild>
-            <a href="#" target="_blank" rel="noreferrer">
+            <a href="https://forms.office.com/r/SaYf3D9bz4" target="_blank" rel="noreferrer">
               <ExternalLink className="w-4 h-4" />
               Solicitação de Frete de Máquinas
             </a>
           </Button>
           <Button variant="outline" className="gap-2" asChild>
-            <a href="#" target="_blank" rel="noreferrer">
+            <a href="https://forms.office.com/r/A7wSsGC5fV" target="_blank" rel="noreferrer">
               <ExternalLink className="w-4 h-4" />
               Solicitação de Frete de Peças/Fracionados
             </a>
