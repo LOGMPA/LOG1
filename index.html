@@ -2,11 +2,508 @@
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
-    <title>Leitor de CTe - Logística</title>
+    <title>Leitor de CTe - Painel Logística</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- Tailwind via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              macGreen: "#275317",
+              macLilac: "#c4b5fd",
+              macPink: "#f9a8d4"
+            },
+            borderRadius: {
+              "2xl": "1.25rem"
+            }
+          }
+        }
+      };
+    </script>
   </head>
-  <body class="antialiased bg-slate-50">
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
+  <body class="min-h-screen bg-slate-950 text-slate-50">
+    <div class="fixed inset-0 pointer-events-none opacity-30">
+      <div class="absolute -top-24 -left-24 w-72 h-72 bg-macLilac blur-3xl rounded-full"></div>
+      <div class="absolute bottom-0 right-0 w-80 h-80 bg-macPink blur-3xl rounded-full"></div>
+    </div>
+
+    <div class="relative z-10 min-h-screen flex">
+      <!-- Sidebar fake -->
+      <aside class="hidden md:flex w-64 flex-col bg-white/90 backdrop-blur border-r border-slate-200">
+        <div class="px-4 py-4 border-b border-slate-200">
+          <div class="flex items-center gap-3">
+            <div class="w-11 h-11 rounded-2xl flex items-center justify-center shadow-lg bg-gradient-to-br from-macGreen via-emerald-500 to-emerald-300">
+              <span class="text-2xl">🚜</span>
+            </div>
+            <div>
+              <h2 class="font-semibold text-slate-900 text-base">Painel Logística</h2>
+              <p class="text-xs text-slate-500">Leitor de CTe boiolinha</p>
+            </div>
+          </div>
+        </div>
+        <div class="px-3 py-3">
+          <div class="text-[11px] uppercase tracking-[0.16em] font-semibold text-slate-500 px-2 mb-2">
+            Visões
+          </div>
+          <button
+            class="w-full text-left rounded-2xl px-3 py-2.5 text-sm flex items-center gap-3 transition-all text-slate-50 bg-slate-900 shadow-md shadow-slate-900/20">
+            <span class="text-macPink text-lg">✨</span>
+            <span>Leitor de CTe</span>
+          </button>
+        </div>
+      </aside>
+
+      <!-- Main -->
+      <main class="flex-1 flex flex-col">
+        <header class="md:hidden bg-slate-900/80 backdrop-blur border-b border-slate-800 px-4 py-3 sticky top-0 z-20">
+          <div class="flex items-center gap-3">
+            <span class="px-2 py-1 rounded-lg border border-slate-700 text-xs">☰</span>
+            <h1 class="text-sm font-semibold text-slate-50">Leitor de CTe</h1>
+          </div>
+        </header>
+
+        <div class="flex-1 overflow-auto">
+          <div class="max-w-6xl mx-auto p-4 md:p-8 space-y-6">
+            <section class="space-y-3">
+              <div
+                class="inline-flex items-center gap-2 rounded-full bg-slate-900/70 border border-slate-700 px-3 py-1 text-[11px] uppercase tracking-[0.18em] text-slate-300">
+                <span class="text-xs">🔒</span>
+                <span>Ferramenta interna</span>
+              </div>
+              <h1 class="text-3xl md:text-4xl font-semibold tracking-tight flex items-center gap-2">
+                Leitor de CTe
+                <span class="text-macLilac text-xl md:text-2xl">• versão fofinha</span>
+              </h1>
+              <p class="text-sm md:text-base text-slate-300 max-w-2xl">
+                Carregue de 1 a 30 CT-es em PDF. O painel lê os layouts conhecidos (Princesa, São Miguel,
+                Sudoeste, TX LOG) e monta uma tabela com Remetente, Destinatário, Tomador, número e valor
+                do serviço para confronto com o sistema da empresa.
+              </p>
+            </section>
+
+            <!-- Card upload -->
+            <section class="bg-white/95 backdrop-blur rounded-2xl border border-slate-200 shadow-sm">
+              <div class="px-5 py-4 border-b border-slate-100">
+                <h2 class="font-semibold text-slate-900">Arquivos PDF</h2>
+              </div>
+              <div class="px-5 py-4 space-y-4">
+                <div class="grid gap-3 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] items-start">
+                  <div class="space-y-2">
+                    <label
+                      for="pdfs"
+                      class="text-xs font-medium tracking-wide text-slate-700 uppercase mb-1 inline-block"
+                    >
+                      Selecione de 1 a 30 PDFs de CTe
+                    </label>
+                    <input
+                      id="pdfs"
+                      type="file"
+                      accept="application/pdf"
+                      multiple
+                      class="block w-full text-sm text-slate-800
+                        file:mr-4 file:py-2.5 file:px-4
+                        file:rounded-xl file:border-0
+                        file:text-sm file:font-medium
+                        file:bg-slate-900 file:text-slate-50
+                        hover:file:bg-slate-800 cursor-pointer"
+                    />
+                    <p id="file-count" class="text-xs text-slate-500">
+                      Nenhum arquivo selecionado.
+                    </p>
+                  </div>
+                  <div class="rounded-xl bg-slate-50/80 border border-slate-200 px-3 py-3 text-xs text-slate-700">
+                    <p class="font-semibold mb-1">Dicas rápidas:</p>
+                    <ul class="list-disc list-inside space-y-1">
+                      <li>Somente CT-e em PDF (sem ZIP, sem scanner zoado demais).</li>
+                      <li>Layouts suportados: Princesa, São Miguel, Sudoeste, TX LOG.</li>
+                      <li>O CSV gerado usa ponto e vírgula, perfeito para Excel PT-BR.</li>
+                    </ul>
+                  </div>
+                </div>
+
+                <p id="error-msg" class="text-sm text-red-500 hidden"></p>
+
+                <div class="flex flex-wrap gap-3">
+                  <button
+                    id="btn-process"
+                    class="inline-flex items-center justify-center rounded-xl px-3.5 py-2.5 text-sm font-medium
+                    bg-gradient-to-r from-macPink via-macLilac to-sky-400
+                    text-slate-900 shadow hover:brightness-105 active:scale-[0.98]
+                    focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-50"
+                  >
+                    <span class="mr-2">📂</span>
+                    <span>Ler PDFs</span>
+                  </button>
+
+                  <button
+                    id="btn-download"
+                    disabled
+                    class="inline-flex items-center justify-center rounded-xl px-3.5 py-2.5 text-sm font-medium
+                    border border-slate-300 text-slate-700 bg-white
+                    hover:bg-slate-50 active:scale-[0.98]
+                    disabled:opacity-50 disabled:cursor-not-allowed
+                    focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-50"
+                  >
+                    <span class="mr-2">📑</span>
+                    <span>Baixar CSV (Excel)</span>
+                  </button>
+                </div>
+              </div>
+            </section>
+
+            <!-- Card tabela -->
+            <section
+              id="results-card"
+              class="bg-white/95 backdrop-blur rounded-2xl border border-slate-200 shadow-sm hidden"
+            >
+              <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+                <h2 class="font-semibold text-slate-900">
+                  Resultado da leitura <span id="result-count" class="text-slate-500"></span>
+                </h2>
+              </div>
+              <div class="px-5 py-4">
+                <div class="overflow-auto">
+                  <table class="min-w-full text-left text-sm">
+                    <thead class="bg-slate-50/80 text-slate-600">
+                      <tr>
+                        <th class="px-3 py-2 text-[11px] font-semibold uppercase tracking-wide whitespace-nowrap">
+                          Arquivo
+                        </th>
+                        <th class="px-3 py-2 text-[11px] font-semibold uppercase tracking-wide whitespace-nowrap">
+                          Transportadora
+                        </th>
+                        <th class="px-3 py-2 text-[11px] font-semibold uppercase tracking-wide whitespace-nowrap">
+                          Série
+                        </th>
+                        <th class="px-3 py-2 text-[11px] font-semibold uppercase tracking-wide whitespace-nowrap">
+                          Número
+                        </th>
+                        <th class="px-3 py-2 text-[11px] font-semibold uppercase tracking-wide whitespace-nowrap">
+                          Data / Hora
+                        </th>
+                        <th class="px-3 py-2 text-[11px] font-semibold uppercase tracking-wide whitespace-nowrap">
+                          Remetente
+                        </th>
+                        <th class="px-3 py-2 text-[11px] font-semibold uppercase tracking-wide whitespace-nowrap">
+                          CNPJ Remetente
+                        </th>
+                        <th class="px-3 py-2 text-[11px] font-semibold uppercase tracking-wide whitespace-nowrap">
+                          Destinatário
+                        </th>
+                        <th class="px-3 py-2 text-[11px] font-semibold uppercase tracking-wide whitespace-nowrap">
+                          CNPJ Destinatário
+                        </th>
+                        <th class="px-3 py-2 text-[11px] font-semibold uppercase tracking-wide whitespace-nowrap">
+                          Tomador
+                        </th>
+                        <th class="px-3 py-2 text-[11px] font-semibold uppercase tracking-wide whitespace-nowrap">
+                          CNPJ Tomador
+                        </th>
+                        <th class="px-3 py-2 text-[11px] font-semibold uppercase tracking-wide whitespace-nowrap">
+                          Valor do Serviço
+                        </th>
+                        <th class="px-3 py-2 text-[11px] font-semibold uppercase tracking-wide whitespace-nowrap">
+                          Erro
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody id="results-body" class="divide-y divide-slate-100"></tbody>
+                  </table>
+                </div>
+              </div>
+            </section>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <!-- pdf.js via CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.2.67/pdf.min.js"></script>
+    <script>
+      const pdfjsLib = window["pdfjs-dist/build/pdf"] || window.pdfjsLib;
+      if (pdfjsLib) {
+        pdfjsLib.GlobalWorkerOptions.workerSrc =
+          "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.2.67/pdf.worker.min.js";
+      }
+    </script>
+
+    <!-- App logic -->
+    <script>
+      let selectedFiles = [];
+      let rows = [];
+
+      const input = document.getElementById("pdfs");
+      const fileCount = document.getElementById("file-count");
+      const errorMsg = document.getElementById("error-msg");
+      const btnProcess = document.getElementById("btn-process");
+      const btnDownload = document.getElementById("btn-download");
+      const resultsCard = document.getElementById("results-card");
+      const resultsBody = document.getElementById("results-body");
+      const resultCount = document.getElementById("result-count");
+
+      input.addEventListener("change", () => {
+        selectedFiles = Array.from(input.files || []);
+        if (selectedFiles.length === 0) {
+          fileCount.textContent = "Nenhum arquivo selecionado.";
+          rows = [];
+          updateTable();
+          return;
+        }
+        if (selectedFiles.length > 30) {
+          showError("Selecione no máximo 30 PDFs por vez.");
+          selectedFiles = [];
+          input.value = "";
+          fileCount.textContent = "Nenhum arquivo selecionado.";
+          rows = [];
+          updateTable();
+          return;
+        }
+        hideError();
+        fileCount.textContent = "Arquivos selecionados: " + selectedFiles.length;
+        rows = [];
+        updateTable();
+      });
+
+      function showError(msg) {
+        errorMsg.textContent = msg;
+        errorMsg.classList.remove("hidden");
+      }
+
+      function hideError() {
+        errorMsg.textContent = "";
+        errorMsg.classList.add("hidden");
+      }
+
+      function normalize(text) {
+        return text
+          .normalize("NFD")
+          .replace(/[\\u0300-\\u036f]/g, "")
+          .replace(/\\s+/g, " ")
+          .toUpperCase();
+      }
+
+      function extractParty(clean, label) {
+        const idx = clean.indexOf(label);
+        if (idx === -1) return { name: "", cnpj: "" };
+        const slice = clean.slice(idx, idx + 650);
+
+        const nameMatch = slice.match(
+          new RegExp(label + "\\\\s+([A-Z0-9 .,&/'-]{3,90}?)\\\\s+(?:ENDERECO|END|MUNICIPIO|MUN|CNPJ)", "i")
+        );
+        const name = nameMatch ? nameMatch[1].trim() : "";
+
+        const cnpjMatch = slice.match(/CNPJ(?:\\/CPF)?[: ]*([0-9.\\-\\/]{14,20})/i);
+        const cnpj = cnpjMatch ? cnpjMatch[1].trim() : "";
+
+        return { name, cnpj };
+      }
+
+      function parseCte(text) {
+        const clean = normalize(text);
+
+        let transportadora = "";
+        if (clean.includes("PRINCESA DOS CAMPOS")) transportadora = "EXPRESSO PRINCESA DOS CAMPOS";
+        else if (clean.includes("EXPRESSO SAO MIGUEL")) transportadora = "EXPRESSO SAO MIGUEL";
+        else if (clean.includes("SUDOESTE TRANSPORTES")) transportadora = "SUDOESTE TRANSPORTES";
+        else if (clean.includes("TX LOG ENCOMENDAS EXPRESSAS"))
+          transportadora = "TX LOG ENCOMENDAS EXPRESSAS";
+
+        const serieMatch = clean.match(/SERIE\\s+([0-9A-Z]{1,4})/);
+        const serie = serieMatch ? serieMatch[1] : "";
+
+        const numeroMatch =
+          clean.match(/NUMERO\\s+([0-9.]{3,})/) || clean.match(/NR[O0]?\\s+([0-9.]{3,})/);
+        const numero = numeroMatch ? numeroMatch[1] : "";
+
+        let dataHora = "";
+        const dhMatch =
+          clean.match(
+            /DATA\\/HORA EMISSAO\\s+([0-9]{2}\\/[0-9]{2}\\/[0-9]{4}\\s+[0-9]{2}:[0-9]{2}:[0-9]{2})/
+          ) ||
+          clean.match(
+            /DATA E HORA DE EMISSAO\\s+([0-9]{2}\\/[0-9]{2}\\/[0-9]{4}\\s+[0-9]{2}:[0-9]{2}:[0-9]{2})/
+          ) ||
+          clean.match(/AUTORIZACAO\\s+([0-9]{2}\\/[0-9]{2}\\/[0-9]{2,4}\\s+[0-9]{2}:[0-9]{2})/);
+        if (dhMatch) dataHora = dhMatch[1];
+
+        const remetente = extractParty(clean, "REMETENTE");
+        const destinatario = extractParty(clean, "DESTINATARIO");
+
+        let tomador = extractParty(clean, "TOMADOR DO SERVICO");
+        if (!tomador.name && !tomador.cnpj) {
+          tomador = extractParty(clean, "TOMADOR");
+        }
+
+        let valorServico = "";
+        const vMatch =
+          clean.match(/VALOR TOTAL DO SERVICO[^0-9]*([0-9.]+,[0-9]{2})/) ||
+          clean.match(/VALOR A RECEBER[^0-9]*([0-9.]+,[0-9]{2})/);
+        if (vMatch) valorServico = vMatch[1];
+
+        return {
+          transportadora,
+          serie,
+          numero,
+          dataHora,
+          remetente,
+          destinatario,
+          tomador,
+          valorServico,
+        };
+      }
+
+      async function readPdfFile(file) {
+        if (!pdfjsLib || !pdfjsLib.getDocument) {
+          throw new Error("pdf.js não carregou.");
+        }
+        const arrayBuffer = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        let fullText = "";
+        for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+          const page = await pdf.getPage(pageNum);
+          const content = await page.getTextContent();
+          const strings = content.items.map((it) => it.str);
+          fullText += strings.join(" ") + "\\n";
+        }
+        return parseCte(fullText);
+      }
+
+      function updateTable() {
+        resultsBody.innerHTML = "";
+        if (!rows.length) {
+          resultsCard.classList.add("hidden");
+          btnDownload.disabled = true;
+          resultCount.textContent = "";
+          return;
+        }
+        resultsCard.classList.remove("hidden");
+        btnDownload.disabled = false;
+        resultCount.textContent = "(" + rows.length + ")";
+
+        for (const r of rows) {
+          const tr = document.createElement("tr");
+          tr.className = "bg-white/90 hover:bg-macLilac/10";
+          const cells = [
+            r.fileName,
+            r.transportadora || "",
+            r.serie || "",
+            r.numero || "",
+            r.dataHora || "",
+            r.remetente?.name || "",
+            r.remetente?.cnpj || "",
+            r.destinatario?.name || "",
+            r.destinatario?.cnpj || "",
+            r.tomador?.name || "",
+            r.tomador?.cnpj || "",
+            r.valorServico || "",
+            r.error || "",
+          ];
+          for (const c of cells) {
+            const td = document.createElement("td");
+            td.className = "px-3 py-2 align-top text-sm text-slate-900";
+            td.textContent = c;
+            tr.appendChild(td);
+          }
+          resultsBody.appendChild(tr);
+        }
+      }
+
+      function toCsvRow(values) {
+        return values
+          .map((v) => {
+            const s = (v ?? "").toString().replace(/"/g, '""');
+            return '"' + s + '"';
+          })
+          .join(";");
+      }
+
+      async function handleProcess() {
+        if (!selectedFiles.length) return;
+        hideError();
+        btnProcess.disabled = true;
+        btnProcess.textContent = "Processando PDFs...";
+        rows = [];
+        for (const file of selectedFiles) {
+          try {
+            const parsed = await readPdfFile(file);
+            rows.push({ fileName: file.name, ...parsed });
+          } catch (err) {
+            console.error(err);
+            rows.push({
+              fileName: file.name,
+              transportadora: "",
+              serie: "",
+              numero: "",
+              dataHora: "",
+              remetente: { name: "", cnpj: "" },
+              destinatario: { name: "", cnpj: "" },
+              tomador: { name: "", cnpj: "" },
+              valorServico: "",
+              error: "Falha ao ler PDF",
+            });
+          }
+        }
+        btnProcess.disabled = false;
+        btnProcess.textContent = "Ler PDFs";
+        updateTable();
+      }
+
+      function handleDownload() {
+        if (!rows.length) return;
+        const header = [
+          "Arquivo",
+          "Transportadora",
+          "Serie",
+          "Numero",
+          "DataHora",
+          "RemetenteNome",
+          "RemetenteCNPJ",
+          "DestinatarioNome",
+          "DestinatarioCNPJ",
+          "TomadorNome",
+          "TomadorCNPJ",
+          "ValorServico",
+        ];
+        const lines = [header.join(";")];
+        for (const r of rows) {
+          lines.push(
+            toCsvRow([
+              r.fileName,
+              r.transportadora,
+              r.serie,
+              r.numero,
+              r.dataHora,
+              r.remetente?.name || "",
+              r.remetente?.cnpj || "",
+              r.destinatario?.name || "",
+              r.destinatario?.cnpj || "",
+              r.tomador?.name || "",
+              r.tomador?.cnpj || "",
+              r.valorServico || "",
+            ])
+          );
+        }
+        const csv = lines.join("\\r\\n");
+        const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "cte-extracao.csv";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }
+
+      btnProcess.addEventListener("click", () => {
+        handleProcess();
+      });
+
+      btnDownload.addEventListener("click", () => {
+        handleDownload();
+      });
+    </script>
   </body>
 </html>
