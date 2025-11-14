@@ -2,10 +2,7 @@
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1.0"
-    />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Painel CTe</title>
 
     <!-- Tailwind via CDN -->
@@ -94,9 +91,7 @@
                   class="text-[11px] text-slate-500 uppercase tracking-wide"
                 ></span>
               </div>
-              <div
-                class="w-full bg-slate-100 rounded-full h-2 overflow-hidden"
-              >
+              <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
                 <div
                   id="progress-bar"
                   class="h-2 bg-gradient-to-r from-amber-400 via-orange-400 to-emerald-500 transition-all duration-300"
@@ -200,13 +195,13 @@
       </div>
     </main>
 
-    <!-- pdf.js -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.2.67/pdf.min.js"></script>
+    <!-- pdf.js (versão estável que funciona bonitinha com getDocument) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script>
-      window.pdfjsLib = window["pdfjs-dist/build/pdf"] || window.pdfjsLib;
+      // Em 3.11.174 o global é pdfjsLib
       if (window.pdfjsLib) {
         window.pdfjsLib.GlobalWorkerOptions.workerSrc =
-          "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.2.67/pdf.worker.min.js";
+          "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
       }
     </script>
 
@@ -494,9 +489,7 @@
             const remetenteNome =
               r.remetente && r.remetente.name ? r.remetente.name : "";
             const remetenteCnpj =
-              r.remetente && r.remetente.cnpj
-                ? r.remetente.cnpj
-                : "";
+              r.remetente && r.remetente.cnpj ? r.remetente.cnpj : "";
             const destinatarioNome =
               r.destinatario && r.destinatario.name
                 ? r.destinatario.name
