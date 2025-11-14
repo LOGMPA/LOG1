@@ -94,7 +94,7 @@
               <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
                 <div
                   id="progress-bar"
-                  class="h-2 bg-gradient-to-r from-amber-400 via-orange-400 to-emerald-500 transition-all duration-300"
+                  class="h-2 transition-all duration-300 bg-[#367C2B]"
                   style="width: 0%"
                 ></div>
               </div>
@@ -102,12 +102,13 @@
 
             <!-- Botões -->
             <div class="flex flex-wrap gap-3">
+              <!-- Ler PDFs: verde John Deere -->
               <button
                 id="btn-process"
                 class="inline-flex items-center justify-center rounded-xl px-3.5 py-2.5 text-sm font-medium
-                  bg-gradient-to-r from-amber-300 via-rose-300 to-sky-300
-                  text-slate-900 shadow hover:brightness-105 active:scale-[0.98]
-                  focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-amber-50"
+                  bg-[#367C2B] text-white shadow
+                  hover:bg-[#2c6321] active:scale-[0.98]
+                  focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-amber-50 focus:ring-[#367C2B]"
               >
                 <span class="mr-2">📂</span>
                 <span class="btn-process-label">Ler PDFs</span>
@@ -129,14 +130,15 @@
               <span id="result-count" class="text-slate-500"></span>
             </h2>
 
+            <!-- Baixar XLSX: verde mais claro -->
             <button
               id="btn-download"
               disabled
               class="inline-flex items-center justify-center rounded-xl px-3.5 py-2 text-xs font-medium
-                border border-slate-300 text-slate-700 bg-white
-                hover:bg-slate-50 active:scale-[0.98]
+                border border-[#58a338] text-[#245015] bg-[#e5f6da]
+                hover:bg-[#d5f0c3] active:scale-[0.98]
                 disabled:opacity-50 disabled:cursor-not-allowed
-                focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-50"
+                focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-50 focus:ring-[#58a338]"
             >
               <span class="mr-2">📑</span>
               <span>Baixar XLSX</span>
@@ -195,10 +197,9 @@
       </div>
     </main>
 
-    <!-- pdf.js (versão estável que funciona bonitinha com getDocument) -->
+    <!-- pdf.js (versão estável) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script>
-      // Em 3.11.174 o global é pdfjsLib
       if (window.pdfjsLib) {
         window.pdfjsLib.GlobalWorkerOptions.workerSrc =
           "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
@@ -286,84 +287,126 @@
           resetProgress();
         });
 
-        function normalize(text) {
-          return text
-            .normalize("NFD")
-            .replace(/[\u0300-\u036f]/g, "")
-            .replace(/\s+/g, " ")
-            .toUpperCase();
-        }
-
-        function extractParty(clean, label) {
-          const idx = clean.indexOf(label);
+        /** Extrai nome + CNPJ olhando um bloco a partir do label (REMETENTE, DESTINATARIO, TOMADOR) */
+        function extractParty(text, labelUpper) {
+          const upper = text.toUpperCase();
+          const idx = upper.indexOf(labelUpper);
           if (idx === -1) return { name: "", cnpj: "" };
-          const slice = clean.slice(idx, idx + 650);
 
-          const nameMatch = slice.match(
-            new RegExp(
-              label +
-                "\\s+([A-Z0-9 .,&/'-]{3,90}?)\\s+(?:ENDERECO|END|MUNICIPIO|MUN|CNPJ)",
-              "i"
-            )
-          );
-          const name = nameMatch ? nameMatch[1].trim() : "";
+          const sliceOrig = text.slice(idx);
+          const linesOrig = sliceOrig.split(/\r?\n/);
+          const linesUpper = linesOrig.map(function (l) {
+            return l.toUpperCase();
+          });
 
-          const cnpjMatch = slice.match(
-            /CNPJ(?:\/CPF)?[: ]*([0-9.\-\/]{14,20})/i
-          );
-          const cnpj = cnpjMatch ? cnpjMatch[1].trim() : "";
+          let name = "";
+          let cnpj = "";
 
-          return { name: name, cnpj: cnpj };
+          const forbidden = /^(ENDERECO|ENDEREÇO|MUNICIPIO|MUNICÍPIO|CNPJ|CPF|PAIS|PAÍS|CEP|INSCRI|FONE|TELEFONE|EXPEDIDOR|RECEBEDOR|TOMADOR|REMETENTE|DESTINATARIO|DESTINATÁRIO|TIPO DO CTE|TIPO DO SERVI)/;
+
+          for (let i = 1; i < linesUpper.length && i < 80; i++) {
+            const up = linesUpper[i].trim();
+            const orig = linesOrig[i].trim();
+
+            if (!name && orig && !forbidden.test(up) && !/^[0-9 .,/:-]+$/.test(orig)) {
+              name = orig;
+            }
+
+            if (!cnpj && orig) {
+              let m = orig.match(/\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}/);
+              if (!m) {
+                m = orig.match(/CNPJ\/?CPF?:?\s*([0-9./-]{14,20})/i);
+              }
+              if (m) cnpj = m[1];
+            }
+
+            if (name && cnpj) break;
+          }
+
+          return { name: name || "", cnpj: cnpj || "" };
         }
 
         function parseCte(text) {
-          const clean = normalize(text);
+          const upper = text.toUpperCase();
 
+          // Transportadora
           let transportadora = "";
-          if (clean.indexOf("PRINCESA DOS CAMPOS") !== -1)
+          if (upper.indexOf("EXPRESSO PRINCESA DOS CAMPOS") !== -1) {
             transportadora = "EXPRESSO PRINCESA DOS CAMPOS";
-          else if (clean.indexOf("EXPRESSO SAO MIGUEL") !== -1)
+          } else if (upper.indexOf("EXPRESSO SAO MIGUEL") !== -1) {
             transportadora = "EXPRESSO SAO MIGUEL";
-          else if (clean.indexOf("SUDOESTE TRANSPORTES") !== -1)
+          } else if (upper.indexOf("SUDOESTE TRANSPORTES") !== -1) {
             transportadora = "SUDOESTE TRANSPORTES";
-          else if (clean.indexOf("TX LOG ENCOMENDAS EXPRESSAS") !== -1)
-            transportadora = "TX LOG ENCOMENDAS EXPRESSAS";
-
-          const serieMatch = clean.match(/SERIE\s+([0-9A-Z]{1,4})/);
-          const serie = serieMatch ? serieMatch[1] : "";
-
-          const numeroMatch =
-            clean.match(/NUMERO\s+([0-9.]{3,})/) ||
-            clean.match(/NR[O0]?\s+([0-9.]{3,})/);
-          const numero = numeroMatch ? numeroMatch[1] : "";
-
-          let dataHora = "";
-          const dhMatch =
-            clean.match(
-              /DATA\/HORA EMISSAO\s+([0-9]{2}\/[0-9]{2}\/[0-9]{4}\s+[0-9]{2}:[0-9]{2}:[0-9]{2})/
-            ) ||
-            clean.match(
-              /DATA E HORA DE EMISSAO\s+([0-9]{2}\/[0-9]{2}\/[0-9]{4}\s+[0-9]{2}:[0-9]{2}:[0-9]{2})/
-            ) ||
-            clean.match(
-              /AUTORIZACAO\s+([0-9]{2}\/[0-9]{2}\/[0-9]{2,4}\s+[0-9]{2}:[0-9]{2})/
-            );
-          if (dhMatch) dataHora = dhMatch[1];
-
-          const remetente = extractParty(clean, "REMETENTE");
-          const destinatario = extractParty(clean, "DESTINATARIO");
-
-          let tomador = extractParty(clean, "TOMADOR DO SERVICO");
-          if (!tomador.name && !tomador.cnpj) {
-            tomador = extractParty(clean, "TOMADOR");
+          } else if (upper.indexOf("TX LOG ENCOMENDAS EXPRESSAS") !== -1) {
+            transportadora = "TX LOG ENCOMENDAS EXPRESSAS LTDA";
+          } else {
+            // fallback: primeira linha não vazia
+            const firstLine = upper
+              .split(/\r?\n/)
+              .map(function (l) {
+                return l.trim();
+              })
+              .filter(Boolean)[0];
+            transportadora = firstLine || "";
           }
 
+          // Série, Número
+          let serie = "";
+          let numero = "";
+
+          // Padrão geral MODELO / SÉRIE / NÚMERO (serve para TXLOG, PRINCESA, SUDOESTE, SAO MIGUEL)
+          const m1 = upper.match(
+            /MODELO[\s\r\n]+S[ÉE]RIE[\s\r\n]+N[ÚU]MERO[\s\S]{0,80}?([0-9]{1,3})[\s\r\n]+([0-9.]{3,})/
+          );
+          if (m1) {
+            serie = m1[1];
+            numero = m1[2];
+          } else {
+            // outro fallback: "SERIE NUMERO MODAL" em uma linha, valores na próxima
+            const m2 = upper.match(
+              /S[ÉE]RIE\s+N[ÚU]MERO\s+MODAL[\s\S]{0,60}?([0-9]{1,3})\s+([0-9.]{3,})/
+            );
+            if (m2) {
+              serie = m2[1];
+              numero = m2[2];
+            }
+          }
+
+          // Data/Hora emissão
+          let dataHora = "";
+          const dh1 = upper.match(
+            /DATA[ \/E]*HORA[ \/A-Z]*EMISS[ÃA]O[^\d]*([0-9]{2}\/[0-9]{2}\/[0-9]{2,4}\s+[0-9]{2}:[0-9]{2}:[0-9]{2})/
+          );
+          if (dh1) {
+            dataHora = dh1[1];
+          } else {
+            const dh2 = upper.match(
+              /AUTORIZA[ÇC][AÃ]O[^\d]*([0-9]{2}\/[0-9]{2}\/[0-9]{2,4}\s+[0-9]{2}:[0-9]{2})/
+            );
+            if (dh2) dataHora = dh2[1];
+          }
+
+          // Partes
+          const remetente = extractParty(text, "REMETENTE");
+          const destinatario = extractParty(text, "DESTINATARIO");
+          let tomador = extractParty(text, "TOMADOR DO SERVI");
+          if (!tomador.name && !tomador.cnpj) {
+            tomador = extractParty(text, "TOMADOR");
+          }
+
+          // Valor do serviço / a receber
           let valorServico = "";
-          const vMatch =
-            clean.match(
-              /VALOR TOTAL DO SERVICO[^0-9]*([0-9.]+,[0-9]{2})/
-            ) || clean.match(/VALOR A RECEBER[^0-9]*([0-9.]+,[0-9]{2})/);
-          if (vMatch) valorServico = vMatch[1];
+          const v1 = upper.match(
+            /VALOR A RECEBER[^0-9]*([0-9.]+,[0-9]{2})/
+          );
+          if (v1) {
+            valorServico = v1[1];
+          } else {
+            const v2 = upper.match(
+              /VALOR TOTAL DO SERVI[ÇC]O[^0-9]*([0-9.]+,[0-9]{2})/
+            );
+            if (v2) valorServico = v2[1];
+          }
 
           return {
             transportadora: transportadora,
@@ -392,7 +435,7 @@
             const strings = content.items.map(function (it) {
               return it.str;
             });
-            fullText += strings.join(" ") + "\n";
+            fullText += strings.join("\n") + "\n";
           }
           return parseCte(fullText);
         }
