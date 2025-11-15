@@ -1,661 +1,340 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Painel CTe</title>
+<head>
+  <meta charset="UTF-8" />
+  <title>Leitor de CT-e</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <!-- Tailwind via CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-  </head>
-  <body
-    class="min-h-screen bg-gradient-to-br from-amber-50 via-amber-100 to-emerald-100 text-slate-900"
-  >
-    <main class="min-h-screen flex items-center justify-center px-4 py-8">
-      <div class="w-full max-w-6xl space-y-6">
-        <!-- Cabeçalho simples -->
-        <header class="flex items-center justify-between mb-2">
-          <div>
-            <h1 class="text-xl font-semibold tracking-tight">
-              Leitor de CT-e
-            </h1>
-            <p class="text-xs text-slate-600">
-              Seleciona os PDFs, eu faço a parte chata.
-            </p>
-          </div>
-        </header>
+  <!-- Tailwind (só pra deixar bonitinho, não influencia na lógica) -->
+  <script src="https://cdn.tailwindcss.com"></script>
 
-        <!-- CARD PRINCIPAL -->
-        <section
-          class="bg-white/95 backdrop-blur rounded-2xl border border-slate-200 shadow-sm"
-        >
-          <div class="px-5 py-4 border-b border-slate-100">
-            <h2 class="font-semibold text-slate-900">Arquivos PDF</h2>
-          </div>
+  <!-- pdf.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script>
+    if (window['pdfjs-dist/build/pdf']) {
+      const pdfjsLib = window['pdfjs-dist/build/pdf'];
+      pdfjsLib.GlobalWorkerOptions.workerSrc =
+        "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+      window.pdfjsLib = pdfjsLib;
+    }
+  </script>
 
-          <div class="px-5 py-4 space-y-4">
-            <div
-              class="grid gap-3 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] items-start"
-            >
-              <!-- Input de arquivos -->
-              <div class="space-y-2">
-                <label
-                  for="pdfs"
-                  class="text-xs font-medium tracking-wide text-slate-700 uppercase mb-1 inline-block"
-                >
-                  Selecione de 1 a 30 PDFs de CTe
-                </label>
-                <input
-                  id="pdfs"
-                  type="file"
-                  accept="application/pdf"
-                  multiple
-                  class="block w-full text-sm text-slate-800
-                    file:mr-4 file:py-2.5 file:px-4
-                    file:rounded-xl file:border-0
-                    file:text-sm file:font-medium
-                    file:bg-slate-900 file:text-slate-50
-                    hover:file:bg-slate-800 cursor-pointer"
-                />
-                <p id="file-count" class="text-xs text-slate-500">
-                  Nenhum arquivo selecionado.
-                </p>
-              </div>
+  <!-- SheetJS para gerar XLSX -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
-              <!-- Dicas -->
-              <div
-                class="rounded-xl bg-slate-50/80 border border-slate-200 px-3 py-3 text-xs text-slate-700"
-              >
-                <p class="font-semibold mb-1">Dicas rápidas:</p>
-                <ul class="list-disc list-inside space-y-1">
-                  <li>Somente CT-e em PDF (sem ZIP, sem scanner zoado).</li>
-                  <li>
-                    Layouts suportados: Princesa, São Miguel, Sudoeste, TX LOG.
-                  </li>
-                  <li>
-                    XLSX gerado com ponto e vírgula, certinho para Excel
-                    PT-BR.
-                  </li>
-                </ul>
-              </div>
-            </div>
-
-            <!-- Erros -->
-            <p id="error-msg" class="text-sm text-red-500 hidden"></p>
-
-            <!-- Barra de progresso -->
-            <div id="progress-wrapper" class="hidden">
-              <div class="flex items-center justify-between mb-1">
-                <span
-                  id="progress-label"
-                  class="text-[11px] text-slate-500 uppercase tracking-wide"
-                ></span>
-              </div>
-              <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
-                <div
-                  id="progress-bar"
-                  class="h-2 transition-all duration-300 bg-[#367C2B]"
-                  style="width: 0%"
-                ></div>
-              </div>
-            </div>
-
-            <!-- Botões -->
-            <div class="flex flex-wrap gap-3">
-              <!-- Ler PDFs: verde John Deere -->
-              <button
-                id="btn-process"
-                class="inline-flex items-center justify-center rounded-xl px-3.5 py-2.5 text-sm font-medium
-                  bg-[#367C2B] text-white shadow
-                  hover:bg-[#2c6321] active:scale-[0.98]
-                  focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-amber-50 focus:ring-[#367C2B]"
-              >
-                <span class="mr-2">📂</span>
-                <span class="btn-process-label">Ler PDFs</span>
-              </button>
-            </div>
-          </div>
-        </section>
-
-        <!-- RESULTADOS -->
-        <section
-          id="results-card"
-          class="bg-white/95 backdrop-blur rounded-2xl border border-slate-200 shadow-sm hidden"
-        >
-          <div
-            class="px-5 py-4 border-b border-slate-100 flex items-center justify-between gap-3"
-          >
-            <h2 class="font-semibold text-slate-900">
-              Resultado da leitura
-              <span id="result-count" class="text-slate-500"></span>
-            </h2>
-
-            <!-- Baixar XLSX: verde mais claro -->
-            <button
-              id="btn-download"
-              disabled
-              class="inline-flex items-center justify-center rounded-xl px-3.5 py-2 text-xs font-medium
-                border border-[#58a338] text-[#245015] bg-[#e5f6da]
-                hover:bg-[#d5f0c3] active:scale-[0.98]
-                disabled:opacity-50 disabled:cursor-not-allowed
-                focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-50 focus:ring-[#58a338]"
-            >
-              <span class="mr-2">📑</span>
-              <span>Baixar XLSX</span>
-            </button>
-          </div>
-
-          <div class="px-5 py-4 overflow-x-auto">
-            <table class="min-w-full text-sm border-collapse">
-              <thead>
-                <tr class="bg-slate-50 text-slate-700">
-                  <th class="px-3 py-2 text-left font-medium border-b">
-                    Arquivo
-                  </th>
-                  <th class="px-3 py-2 text-left font-medium border-b">
-                    Transportadora
-                  </th>
-                  <th class="px-3 py-2 text-left font-medium border-b">
-                    Série
-                  </th>
-                  <th class="px-3 py-2 text-left font-medium border-b">
-                    Número
-                  </th>
-                  <th class="px-3 py-2 text-left font-medium border-b">
-                    Data / Hora emissão
-                  </th>
-                  <th class="px-3 py-2 text-left font-medium border-b">
-                    Remetente
-                  </th>
-                  <th class="px-3 py-2 text-left font-medium border-b">
-                    CNPJ Remetente
-                  </th>
-                  <th class="px-3 py-2 text-left font-medium border-b">
-                    Destinatário
-                  </th>
-                  <th class="px-3 py-2 text-left font-medium border-b">
-                    CNPJ Destinatário
-                  </th>
-                  <th class="px-3 py-2 text-left font-medium border-b">
-                    Tomador
-                  </th>
-                  <th class="px-3 py-2 text-left font-medium border-b">
-                    CNPJ Tomador
-                  </th>
-                  <th class="px-3 py-2 text-left font-medium border-b">
-                    Valor Serviço
-                  </th>
-                  <th class="px-3 py-2 text-left font-medium border-b">
-                    Erro
-                  </th>
-                </tr>
-              </thead>
-              <tbody id="results-body"></tbody>
-            </table>
-          </div>
-        </section>
+  <style>
+    body {
+      background: linear-gradient(135deg, #fef3c7, #e0f2fe);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    .scrollbar-thin::-webkit-scrollbar {
+      height: 6px;
+      width: 6px;
+    }
+    .scrollbar-thin::-webkit-scrollbar-thumb {
+      background-color: rgba(148, 163, 184, 0.8);
+      border-radius: 9999px;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex items-start justify-center py-8">
+  <div class="w-full max-w-6xl bg-white/80 shadow-xl rounded-2xl border border-slate-200 p-6 space-y-6">
+    <header class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <h1 class="text-2xl font-bold text-slate-800">Leitor de CT-e</h1>
+        <p class="text-slate-600 text-sm">
+          Joga os PDFs de CT-e aqui e eu monto a planilha com as infos importantes.
+        </p>
       </div>
-    </main>
+      <button id="btnXlsx"
+              class="inline-flex items-center justify-center px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
+              disabled>
+        Baixar XLSX
+      </button>
+    </header>
 
-    <!-- pdf.js (versão estável) -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-    <script>
-      if (window.pdfjsLib) {
-        window.pdfjsLib.GlobalWorkerOptions.workerSrc =
-          "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+    <section class="space-y-3">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <p class="text-sm font-semibold text-slate-700 mb-1">
+            Arquivos PDF de CT-e
+          </p>
+          <p class="text-xs text-slate-500">
+            Aceita de 1 a 30 PDFs. Modelos TXLOG, Sudoeste, São Miguel, Princesa (iguais aos exemplos).
+          </p>
+        </div>
+        <label class="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-dashed border-slate-300 cursor-pointer bg-slate-50 hover:bg-slate-100 text-sm font-medium text-slate-700">
+          <span>Selecionar arquivos</span>
+          <input id="fileInput" type="file" accept="application/pdf" multiple class="hidden" />
+        </label>
+      </div>
+      <p id="fileInfo" class="text-xs text-slate-500"></p>
+      <p class="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+        Dica: cada transportadora tem layout próprio. O código tenta entender pelo texto e usar regras
+        específicas pra achar Número, CNPJs, Tomador, Valor a receber, etc.
+      </p>
+    </section>
+
+    <section class="space-y-2">
+      <div class="flex items-center justify-between">
+        <h2 class="text-sm font-semibold text-slate-700">Resultado da leitura</h2>
+        <p class="text-xs text-slate-500" id="statusMsg"></p>
+      </div>
+
+      <div class="border border-slate-200 rounded-xl overflow-hidden">
+        <div class="overflow-auto scrollbar-thin" style="max-height: 480px;">
+          <table class="min-w-full text-xs text-left text-slate-700" id="resultTable">
+            <thead class="bg-slate-100 sticky top-0 z-10">
+              <tr>
+                <th class="px-3 py-2 border-b border-slate-200">Arquivo</th>
+                <th class="px-3 py-2 border-b border-slate-200">Transportadora</th>
+                <th class="px-3 py-2 border-b border-slate-200">Número CT-e</th>
+                <th class="px-3 py-2 border-b border-slate-200">Data / Hora emissão</th>
+                <th class="px-3 py-2 border-b border-slate-200">Remetente</th>
+                <th class="px-3 py-2 border-b border-slate-200">CNPJ Remetente</th>
+                <th class="px-3 py-2 border-b border-slate-200">Destinatário</th>
+                <th class="px-3 py-2 border-b border-slate-200">CNPJ Destinatário</th>
+                <th class="px-3 py-2 border-b border-slate-200">Tomador</th>
+                <th class="px-3 py-2 border-b border-slate-200">CNPJ Tomador</th>
+                <th class="px-3 py-2 border-b border-slate-200">Valor Serviço</th>
+              </tr>
+            </thead>
+            <tbody id="resultBody">
+              <!-- linhas criadas via JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const fileInput = document.getElementById("fileInput");
+    const fileInfo = document.getElementById("fileInfo");
+    const statusMsg = document.getElementById("statusMsg");
+    const resultBody = document.getElementById("resultBody");
+    const btnXlsx = document.getElementById("btnXlsx");
+
+    let rowsData = [];
+
+    fileInput.addEventListener("change", async (e) => {
+      const files = Array.from(e.target.files || []);
+      rowsData = [];
+      resultBody.innerHTML = "";
+      btnXlsx.disabled = true;
+
+      if (!files.length) {
+        fileInfo.textContent = "Nenhum arquivo selecionado.";
+        statusMsg.textContent = "";
+        return;
       }
-    </script>
 
-    <!-- XLSX para exportar em .xlsx -->
-    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+      if (!window.pdfjsLib) {
+        alert("pdf.js não carregou. Confere o link do CDN.");
+        return;
+      }
 
-    <!-- Lógica do app -->
-    <script>
-      (function () {
-        let selectedFiles = [];
-        let rows = [];
+      fileInfo.textContent = `${files.length} arquivo(s) selecionado(s).`;
+      statusMsg.textContent = "Lendo PDFs... isso pode levar alguns segundos.";
 
-        const input = document.getElementById("pdfs");
-        const fileCount = document.getElementById("file-count");
-        const errorMsg = document.getElementById("error-msg");
-        const btnProcess = document.getElementById("btn-process");
-        const btnDownload = document.getElementById("btn-download");
-        const resultsCard = document.getElementById("results-card");
-        const resultsBody = document.getElementById("results-body");
-        const resultCount = document.getElementById("result-count");
-        const progressWrapper = document.getElementById("progress-wrapper");
-        const progressBar = document.getElementById("progress-bar");
-        const progressLabel = document.getElementById("progress-label");
-
-        function showError(msg) {
-          errorMsg.textContent = msg;
-          errorMsg.classList.remove("hidden");
-        }
-
-        function hideError() {
-          errorMsg.textContent = "";
-          errorMsg.classList.add("hidden");
-        }
-
-        function resetProgress() {
-          if (!progressWrapper) return;
-          progressWrapper.classList.add("hidden");
-          progressBar.style.width = "0%";
-          progressLabel.textContent = "";
-        }
-
-        function setProgress(current, total) {
-          if (!progressWrapper) return;
-          if (!total || total <= 0) {
-            resetProgress();
-            return;
-          }
-          const pct = Math.round((current / total) * 100);
-          progressWrapper.classList.remove("hidden");
-          progressBar.style.width = pct + "%";
-          progressLabel.textContent =
-            "Processando " + current + " / " + total + " PDFs (" + pct + "%)";
-          if (current === total) {
-            setTimeout(resetProgress, 800);
-          }
-        }
-
-        input.addEventListener("change", function () {
-          selectedFiles = Array.prototype.slice.call(input.files || []);
-          if (selectedFiles.length === 0) {
-            fileCount.textContent = "Nenhum arquivo selecionado.";
-            rows = [];
-            updateTable();
-            resetProgress();
-            return;
-          }
-          if (selectedFiles.length > 30) {
-            showError("Selecione no máximo 30 PDFs por vez.");
-            selectedFiles = [];
-            input.value = "";
-            fileCount.textContent = "Nenhum arquivo selecionado.";
-            rows = [];
-            updateTable();
-            resetProgress();
-            return;
-          }
-          hideError();
-          fileCount.textContent =
-            "Arquivos selecionados: " + selectedFiles.length;
-          rows = [];
-          updateTable();
-          resetProgress();
-        });
-
-        /** Extrai nome + CNPJ olhando um bloco a partir do label (REMETENTE, DESTINATARIO, TOMADOR) */
-        function extractParty(text, labelUpper) {
-          const upper = text.toUpperCase();
-          const idx = upper.indexOf(labelUpper);
-          if (idx === -1) return { name: "", cnpj: "" };
-
-          const sliceOrig = text.slice(idx);
-          const linesOrig = sliceOrig.split(/\r?\n/);
-          const linesUpper = linesOrig.map(function (l) {
-            return l.toUpperCase();
-          });
-
-          let name = "";
-          let cnpj = "";
-
-          const forbidden = /^(ENDERECO|ENDEREÇO|MUNICIPIO|MUNICÍPIO|CNPJ|CPF|PAIS|PAÍS|CEP|INSCRI|FONE|TELEFONE|EXPEDIDOR|RECEBEDOR|TOMADOR|REMETENTE|DESTINATARIO|DESTINATÁRIO|TIPO DO CTE|TIPO DO SERVI)/;
-
-          for (let i = 1; i < linesUpper.length && i < 80; i++) {
-            const up = linesUpper[i].trim();
-            const orig = linesOrig[i].trim();
-
-            if (!name && orig && !forbidden.test(up) && !/^[0-9 .,/:-]+$/.test(orig)) {
-              name = orig;
-            }
-
-            if (!cnpj && orig) {
-              let m = orig.match(/\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}/);
-              if (!m) {
-                m = orig.match(/CNPJ\/?CPF?:?\s*([0-9./-]{14,20})/i);
-              }
-              if (m) cnpj = m[1];
-            }
-
-            if (name && cnpj) break;
-          }
-
-          return { name: name || "", cnpj: cnpj || "" };
-        }
-
-        function parseCte(text) {
-          const upper = text.toUpperCase();
-
-          // Transportadora
-          let transportadora = "";
-          if (upper.indexOf("EXPRESSO PRINCESA DOS CAMPOS") !== -1) {
-            transportadora = "EXPRESSO PRINCESA DOS CAMPOS";
-          } else if (upper.indexOf("EXPRESSO SAO MIGUEL") !== -1) {
-            transportadora = "EXPRESSO SAO MIGUEL";
-          } else if (upper.indexOf("SUDOESTE TRANSPORTES") !== -1) {
-            transportadora = "SUDOESTE TRANSPORTES";
-          } else if (upper.indexOf("TX LOG ENCOMENDAS EXPRESSAS") !== -1) {
-            transportadora = "TX LOG ENCOMENDAS EXPRESSAS LTDA";
-          } else {
-            // fallback: primeira linha não vazia
-            const firstLine = upper
-              .split(/\r?\n/)
-              .map(function (l) {
-                return l.trim();
-              })
-              .filter(Boolean)[0];
-            transportadora = firstLine || "";
-          }
-
-          // Série, Número
-          let serie = "";
-          let numero = "";
-
-          // Padrão geral MODELO / SÉRIE / NÚMERO (serve para TXLOG, PRINCESA, SUDOESTE, SAO MIGUEL)
-          const m1 = upper.match(
-            /MODELO[\s\r\n]+S[ÉE]RIE[\s\r\n]+N[ÚU]MERO[\s\S]{0,80}?([0-9]{1,3})[\s\r\n]+([0-9.]{3,})/
-          );
-          if (m1) {
-            serie = m1[1];
-            numero = m1[2];
-          } else {
-            // outro fallback: "SERIE NUMERO MODAL" em uma linha, valores na próxima
-            const m2 = upper.match(
-              /S[ÉE]RIE\s+N[ÚU]MERO\s+MODAL[\s\S]{0,60}?([0-9]{1,3})\s+([0-9.]{3,})/
-            );
-            if (m2) {
-              serie = m2[1];
-              numero = m2[2];
-            }
-          }
-
-          // Data/Hora emissão
-          let dataHora = "";
-          const dh1 = upper.match(
-            /DATA[ \/E]*HORA[ \/A-Z]*EMISS[ÃA]O[^\d]*([0-9]{2}\/[0-9]{2}\/[0-9]{2,4}\s+[0-9]{2}:[0-9]{2}:[0-9]{2})/
-          );
-          if (dh1) {
-            dataHora = dh1[1];
-          } else {
-            const dh2 = upper.match(
-              /AUTORIZA[ÇC][AÃ]O[^\d]*([0-9]{2}\/[0-9]{2}\/[0-9]{2,4}\s+[0-9]{2}:[0-9]{2})/
-            );
-            if (dh2) dataHora = dh2[1];
-          }
-
-          // Partes
-          const remetente = extractParty(text, "REMETENTE");
-          const destinatario = extractParty(text, "DESTINATARIO");
-          let tomador = extractParty(text, "TOMADOR DO SERVI");
-          if (!tomador.name && !tomador.cnpj) {
-            tomador = extractParty(text, "TOMADOR");
-          }
-
-          // Valor do serviço / a receber
-          let valorServico = "";
-          const v1 = upper.match(
-            /VALOR A RECEBER[^0-9]*([0-9.]+,[0-9]{2})/
-          );
-          if (v1) {
-            valorServico = v1[1];
-          } else {
-            const v2 = upper.match(
-              /VALOR TOTAL DO SERVI[ÇC]O[^0-9]*([0-9.]+,[0-9]{2})/
-            );
-            if (v2) valorServico = v2[1];
-          }
-
-          return {
-            transportadora: transportadora,
-            serie: serie,
-            numero: numero,
-            dataHora: dataHora,
-            remetente: remetente,
-            destinatario: destinatario,
-            tomador: tomador,
-            valorServico: valorServico,
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        try {
+          const row = await processPdfFile(file);
+          rowsData.push(row);
+          appendRow(row);
+        } catch (err) {
+          console.error("Erro ao ler PDF", file.name, err);
+          const row = {
+            arquivo: file.name,
+            transportadora: "ERRO AO LER",
+            numero: "",
+            dataHora: "",
+            remetente: "",
+            cnpjRemetente: "",
+            destinatario: "",
+            cnpjDestinatario: "",
+            tomador: "",
+            cnpjTomador: "",
+            valorServico: ""
           };
+          rowsData.push(row);
+          appendRow(row);
         }
+      }
 
-        async function readPdfFile(file) {
-          if (!window.pdfjsLib || !window.pdfjsLib.getDocument) {
-            throw new Error("pdf.js não carregou.");
-          }
-          const arrayBuffer = await file.arrayBuffer();
-          const pdf = await window.pdfjsLib
-            .getDocument({ data: arrayBuffer })
-            .promise;
-          let fullText = "";
-          for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
-            const page = await pdf.getPage(pageNum);
-            const content = await page.getTextContent();
-            const strings = content.items.map(function (it) {
-              return it.str;
-            });
-            fullText += strings.join("\n") + "\n";
-          }
-          return parseCte(fullText);
-        }
+      statusMsg.textContent = "Leitura concluída.";
+      btnXlsx.disabled = rowsData.length === 0;
+    });
 
-        function updateTable() {
-          resultsBody.innerHTML = "";
-          if (!rows.length) {
-            resultsCard.classList.add("hidden");
-            btnDownload.disabled = true;
-            resultCount.textContent = "";
-            return;
-          }
-          resultsCard.classList.remove("hidden");
-          btnDownload.disabled = false;
-          resultCount.textContent =
-            "(" + rows.length + " CT-e" + (rows.length > 1 ? "s" : "") + ")";
+    async function processPdfFile(file) {
+      const arrayBuffer = await file.arrayBuffer();
+      const loadingTask = window.pdfjsLib.getDocument({ data: arrayBuffer });
+      const pdf = await loadingTask.promise;
 
-          for (let i = 0; i < rows.length; i++) {
-            const r = rows[i];
-            const tr = document.createElement("tr");
-            tr.className = "bg-white/90 hover:bg-emerald-50";
+      let fullText = "";
+      for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+        const page = await pdf.getPage(pageNum);
+        const textContent = await page.getTextContent();
+        const pageText = textContent.items.map(item => item.str).join(" ");
+        fullText += "\n" + pageText;
+      }
 
-            const remetenteNome =
-              r.remetente && r.remetente.name ? r.remetente.name : "";
-            const remetenteCnpj =
-              r.remetente && r.remetente.cnpj ? r.remetente.cnpj : "";
-            const destinatarioNome =
-              r.destinatario && r.destinatario.name
-                ? r.destinatario.name
-                : "";
-            const destinatarioCnpj =
-              r.destinatario && r.destinatario.cnpj
-                ? r.destinatario.cnpj
-                : "";
-            const tomadorNome =
-              r.tomador && r.tomador.name ? r.tomador.name : "";
-            const tomadorCnpj =
-              r.tomador && r.tomador.cnpj ? r.tomador.cnpj : "";
+      const parsed = parseCte(fullText);
+      return {
+        arquivo: file.name,
+        ...parsed
+      };
+    }
 
-            const cells = [
-              r.fileName || "",
-              r.transportadora || "",
-              r.serie || "",
-              r.numero || "",
-              r.dataHora || "",
-              remetenteNome,
-              remetenteCnpj,
-              destinatarioNome,
-              destinatarioCnpj,
-              tomadorNome,
-              tomadorCnpj,
-              r.valorServico || "",
-              r.error || "",
-            ];
+    function parseCte(text) {
+      const upper = text.normalize("NFD").replace(/\p{Mn}/gu, "").toUpperCase();
 
-            for (let j = 0; j < cells.length; j++) {
-              const td = document.createElement("td");
-              td.className = "px-3 py-2 align-top text-sm text-slate-900";
-              td.textContent = cells[j];
-              tr.appendChild(td);
-            }
-            resultsBody.appendChild(tr);
-          }
-        }
+      const transportadora = detectTransportadora(upper);
 
-        function toCsvRow(values) {
-          return values
-            .map(function (v) {
-              const s = (v == null ? "" : String(v)).replace(/"/g, '""');
-              return '"' + s + '"';
-            })
-            .join(";");
-        }
+      const numero = extractNumero(upper);
+      const dataHora = extractDataHora(upper);
+      const valorServico = extractValorServico(upper);
 
-        function buildAoA() {
-          const header = [
-            "Arquivo",
-            "Transportadora",
-            "Serie",
-            "Numero",
-            "DataHora",
-            "RemetenteNome",
-            "RemetenteCNPJ",
-            "DestinatarioNome",
-            "DestinatarioCNPJ",
-            "TomadorNome",
-            "TomadorCNPJ",
-            "ValorServico",
-          ];
+      const remetente = extractParte(upper, "REMETENTE");
+      const destinatario = extractParte(upper, "DESTINATARIO");
+      const tomadorLabel = upper.includes("TOMADOR DO SERVICO")
+        ? "TOMADOR DO SERVICO"
+        : "TOMADOR";
 
-          const data = [];
-          for (let i = 0; i < rows.length; i++) {
-            const r = rows[i];
-            const remetenteNome =
-              r.remetente && r.remetente.name ? r.remetente.name : "";
-            const remetenteCnpj =
-              r.remetente && r.remetente.cnpj ? r.remetente.cnpj : "";
-            const destinatarioNome =
-              r.destinatario && r.destinatario.name
-                ? r.destinatario.name
-                : "";
-            const destinatarioCnpj =
-              r.destinatario && r.destinatario.cnpj
-                ? r.destinatario.cnpj
-                : "";
-            const tomadorNome =
-              r.tomador && r.tomador.name ? r.tomador.name : "";
-            const tomadorCnpj =
-              r.tomador && r.tomador.cnpj ? r.tomador.cnpj : "";
+      const tomador = extractParte(upper, tomadorLabel);
 
-            data.push([
-              r.fileName || "",
-              r.transportadora || "",
-              r.serie || "",
-              r.numero || "",
-              r.dataHora || "",
-              remetenteNome,
-              remetenteCnpj,
-              destinatarioNome,
-              destinatarioCnpj,
-              tomadorNome,
-              tomadorCnpj,
-              r.valorServico || "",
-            ]);
-          }
+      const cnpjRemetente = extractCnpj(upper, "REMETENTE");
+      const cnpjDestinatario = extractCnpj(upper, "DESTINATARIO");
+      const cnpjTomador = extractCnpj(upper, tomadorLabel);
 
-          return { header: header, data: data };
-        }
+      return {
+        transportadora,
+        numero,
+        dataHora,
+        remetente,
+        cnpjRemetente,
+        destinatario,
+        cnpjDestinatario,
+        tomador,
+        cnpjTomador,
+        valorServico
+      };
+    }
 
-        function handleDownload() {
-          if (!rows.length) return;
+    function detectTransportadora(text) {
+      if (text.includes("TX LOG ENCOMENDAS EXPRESSAS LTDA")) return "TX LOG";
+      if (text.includes("SUDOESTE TRANSPORTES LTDA") || text.includes("SUD0ESTE TRANSPORTES LTDA")) return "SUDOESTE";
+      if (text.includes("EXPRESSO SAO MIGUEL")) return "SAO MIGUEL";
+      if (text.includes("EXPRESSO PRINCESA DOS CAMPOS")) return "PRINCESA";
+      return "DESCONHECIDA";
+    }
 
-          const aoa = buildAoA();
+    function extractNumero(text) {
+      let m = text.match(/NUMERO\s+([0-9]{5,9})/);
+      if (m) return m[1];
+      m = text.match(/NR[ºO]?\s+([0-9.]{5,})/);
+      if (m) return m[1];
+      return "";
+    }
 
-          if (window.XLSX) {
-            const sheetData = [aoa.header].concat(aoa.data);
-            const ws = XLSX.utils.aoa_to_sheet(sheetData);
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "CTe");
-            XLSX.writeFile(wb, "cte-extracao.xlsx");
-          } else {
-            const lines = [aoa.header.join(";")];
-            for (let i = 0; i < aoa.data.length; i++) {
-              lines.push(toCsvRow(aoa.data[i]));
-            }
-            const csv = lines.join("\r\n");
-            const blob = new Blob([csv], {
-              type: "text/csv;charset=utf-8;",
-            });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = "cte-extracao.csv";
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-          }
-        }
+    function extractDataHora(text) {
+      const m = text.match(/(\d{2}\/\d{2}\/\d{4})\s+(\d{2}:\d{2}(?::\d{2})?)/);
+      return m ? `${m[1]} ${m[2]}` : "";
+    }
 
-        async function handleProcess() {
-          if (!selectedFiles.length) return;
-          hideError();
-          btnProcess.disabled = true;
-          const labelSpan =
-            btnProcess.querySelector(".btn-process-label");
-          if (labelSpan) labelSpan.textContent = "Processando PDFs...";
+    function extractValorServico(text) {
+      let m = text.match(/VALOR A RECEBER[^0-9]{0,20}([0-9.]+,[0-9]{2})/);
+      if (m) return m[1];
+      m = text.match(/VALOR TOTAL DO SERVIC[O0][^0-9]{0,20}([0-9.]+,[0-9]{2})/);
+      if (m) return m[1];
+      return "";
+    }
 
-          rows = [];
-          const total = selectedFiles.length;
-          setProgress(0, total);
+    function extractParte(text, label) {
+      const idx = text.indexOf(label);
+      if (idx === -1) return "";
+      const slice = text.slice(idx + label.length, idx + label.length + 160);
+      const cleaned = slice.replace(/\s+/g, " ").trim();
+      const stopIdx = cleaned.search(/\b(ENDERECO|ENDERECO:|MUN|CNPJ|CNPJ\/CPF|CPF|UF|INSCRICAO|INSC)\b/);
+      const name = stopIdx > 0 ? cleaned.slice(0, stopIdx) : cleaned;
+      return name.trim();
+    }
 
-          for (let i = 0; i < selectedFiles.length; i++) {
-            const file = selectedFiles[i];
-            setProgress(i, total);
-            try {
-              const parsed = await readPdfFile(file);
-              rows.push({
-                fileName: file.name,
-                transportadora: parsed.transportadora,
-                serie: parsed.serie,
-                numero: parsed.numero,
-                dataHora: parsed.dataHora,
-                remetente: parsed.remetente,
-                destinatario: parsed.destinatario,
-                tomador: parsed.tomador,
-                valorServico: parsed.valorServico,
-                error: "",
-              });
-            } catch (err) {
-              console.error(err);
-              rows.push({
-                fileName: file.name,
-                transportadora: "",
-                serie: "",
-                numero: "",
-                dataHora: "",
-                remetente: { name: "", cnpj: "" },
-                destinatario: { name: "", cnpj: "" },
-                tomador: { name: "", cnpj: "" },
-                valorServico: "",
-                error: "Falha ao ler PDF",
-              });
-            }
-            setProgress(i + 1, total);
-          }
+    function extractCnpj(text, label) {
+      const idx = text.indexOf(label);
+      if (idx === -1) return "";
+      const slice = text.slice(idx, idx + 260);
+      let m = slice.match(/CNPJ\/CPF[^0-9]{0,15}([0-9./-]{14,20})/);
+      if (!m) {
+        m = slice.match(/CNPJ[^0-9]{0,15}([0-9./-]{14,20})/);
+      }
+      return m ? m[1].trim() : "";
+    }
 
-          updateTable();
-          btnProcess.disabled = false;
-          if (labelSpan) labelSpan.textContent = "Ler PDFs";
-        }
+    function appendRow(row) {
+      const tr = document.createElement("tr");
+      tr.className = "odd:bg-white even:bg-slate-50/60";
 
-        btnProcess.addEventListener("click", function () {
-          handleProcess();
-        });
+      function td(text) {
+        const c = document.createElement("td");
+        c.className = "px-3 py-2 border-b border-slate-200 align-top";
+        c.textContent = text || "";
+        return c;
+      }
 
-        btnDownload.addEventListener("click", function () {
-          handleDownload();
-        });
-      })();
-    </script>
-  </body>
+      tr.appendChild(td(row.arquivo));
+      tr.appendChild(td(row.transportadora));
+      tr.appendChild(td(row.numero));
+      tr.appendChild(td(row.dataHora));
+      tr.appendChild(td(row.remetente));
+      tr.appendChild(td(row.cnpjRemetente));
+      tr.appendChild(td(row.destinatario));
+      tr.appendChild(td(row.cnpjDestinatario));
+      tr.appendChild(td(row.tomador));
+      tr.appendChild(td(row.cnpjTomador));
+      tr.appendChild(td(row.valorServico));
+
+      resultBody.appendChild(tr);
+    }
+
+    btnXlsx.addEventListener("click", () => {
+      if (!rowsData.length) return;
+
+      const header = [
+        "Arquivo",
+        "Transportadora",
+        "Número CT-e",
+        "Data/Hora emissão",
+        "Remetente",
+        "CNPJ Remetente",
+        "Destinatário",
+        "CNPJ Destinatário",
+        "Tomador",
+        "CNPJ Tomador",
+        "Valor Serviço"
+      ];
+
+      const data = rowsData.map(r => [
+        r.arquivo,
+        r.transportadora,
+        r.numero,
+        r.dataHora,
+        r.remetente,
+        r.cnpjRemetente,
+        r.destinatario,
+        r.cnpjDestinatario,
+        r.tomador,
+        r.cnpjTomador,
+        r.valorServico
+      ]);
+
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.aoa_to_sheet([header, ...data]);
+      XLSX.utils.book_append_sheet(wb, ws, "CTe");
+
+      XLSX.writeFile(wb, "cte_leitura.xlsx");
+    });
+  </script>
+</body>
 </html>
